@@ -150,12 +150,15 @@ func main() {
 	tree.Insert([]byte("dir1/sub1/text3.txt"), "file")
 	tree.Insert([]byte("dir1/sub1/sub2/text4.txt"), "file")
 	tree.Insert([]byte("dir2/sub2/text5.txt"), "file")
-	c := 0
 	leafFilter := func(n *art.Node) {
-		if n.IsLeaf() && c < 3 {
-			c++
+		if n.IsLeaf() {
 			fmt.Println("value=", string(n.Key()), n.Value())
 		}
 	}
-	tree.Scan([]byte("dir1/sub1/sub2/text4.txt"), leafFilter)
+	tree.Scan([]byte("dir1/"), leafFilter)
+	deleted := tree.Delete([]byte("dir1/sub1/sub2/text4.txt"))
+	fmt.Println("deleted=", deleted)
+
+	tree.Scan([]byte("dir1/"), leafFilter)
+
 }
