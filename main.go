@@ -99,9 +99,20 @@ package main
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/arriqaaq/art"
+
+	art2 "github.com/plar/go-adaptive-radix-tree"
 )
+
+type ObjectInfo struct {
+	// Name of the bucket.
+	Bucket string
+
+	// Name of the object.
+	Name string
+}
 
 func main() {
 	tree := art.NewTree()
@@ -144,21 +155,74 @@ func main() {
 	// tree.Insert([]byte("api"), "bar")
 	// tree.Insert([]byte("api.com"), "bar")
 	// tree.Insert([]byte("api.com.xyz"), "bar")
-	tree.Insert([]byte("dir1/sub1/text2.txt"), "file")
-	tree.Insert([]byte("dir1/sub1/text1.txt"), "file")
-	tree.Insert([]byte("dir1/sub1/"), "folder")
-	tree.Insert([]byte("dir1/sub1/text3.txt"), "file")
-	tree.Insert([]byte("dir1/sub1/sub2/text4.txt"), "file")
-	tree.Insert([]byte("dir2/sub2/text5.txt"), "file")
+	prefix := "dir1/sub1/"
+	objInfos := []ObjectInfo{}
+	prefixes := map[string]bool{}
+	//nextMarker := ""
+	tree.Insert([]byte("dir1/sub1/text2.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/text1.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/text3.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/sub2/text4.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir2/sub2/text5.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/tt.exe"), ObjectInfo{"hsbk", "text2.txt"})
 	leafFilter := func(n *art.Node) {
+		fmt.Println("value=", string(n.Key()), n.Value())
 		if n.IsLeaf() {
-			fmt.Println("value=", string(n.Key()), n.Value())
+			if strings.HasPrefix(string(n.Key()), prefix) {
+				trimmed := strings.TrimPrefix(string(n.Key()), prefix)
+				parts := strings.Split(trimmed, "/")
+				if len(parts) > 0 && parts[0] != "" {
+					if len(parts) == 1 {
+						ob, ok := n.Value().(ObjectInfo)
+						if ok {
+							objInfos = append(objInfos, ob)
+						}
+
+					} else {
+						// If there are more parts, it's a folder
+						prefixes[prefix+parts[0]+"/"] = true
+					}
+
+				}
+			}
 		}
 	}
-	tree.Scan([]byte("dir1/"), leafFilter)
-	deleted := tree.Delete([]byte("dir1/sub1/sub2/text4.txt"))
+	tree.Scan([]byte(prefix), leafFilter)
+	fmt.Println("Harsh objs", objInfos)
+	fmt.Println("Harsh prefix", prefixes)
+	deleted := tree.Delete([]byte("dir1/sub1/sub2/text4.txt//"))
 	fmt.Println("deleted=", deleted)
 
-	tree.Scan([]byte("dir1/"), leafFilter)
+	tree.Scan([]byte("dir1/sub1/"), leafFilter)
+
+	Art2()
+
+}
+
+func Art2() {
+	fmt.Println("Art2-----------------")
+	tree := art2.New()
+	tree.Insert([]byte("dir1/sub1/text2.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/text1.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/text3.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/sub1/sub2/text4.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir2/sub2/text5.txt"), ObjectInfo{"hsbk", "text2.txt"})
+	tree.Insert([]byte("dir1/tt.exe"), ObjectInfo{"hsbk", "text2.txt"})
+	ff, _ := tree.Search([]byte("dir1/sub1/text1.txt"))
+	fmt.Println(ff)
+	leafFilter := func(n art2.Node) bool {
+		if n.Kind() == art2.Leaf {
+			fmt.Println("value=", string(n.Key()), n.Value())
+		}
+
+		return true
+	}
+	tree.ForEachPrefix([]byte("dir1/sub1/"), leafFilter)
+
+	_, ok := tree.Delete([]byte("dir1/sub1/"))
+	fmt.Println("okkk", ok)
+	tree.ForEachPrefix([]byte("dir1/sub1/"), leafFilter)
 
 }
